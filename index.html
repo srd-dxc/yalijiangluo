@@ -1,0 +1,746 @@
+
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>压降试井数据分析工具</title>
+    <!-- 引入Chart.js绘图库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 基础样式优化 -->
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+            font-family: Arial, sans-serif;
+        }
+        .main-title {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 28px;
+            margin: 30px 0;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #3498db;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .param-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .param-item {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #34495e;
+        }
+        input {
+            padding: 8px 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input:invalid {
+            border-color: #e74c3c;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: center;
+        }
+        .data-table th {
+            background: #3498db;
+            color: white;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+        .result-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2ecc71;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .result-item {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .query-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4f8;
+            border-radius: 6px;
+        }
+        .query-result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .query-success {
+            background-color: #eafaf1;
+            border: 1px solid #2ecc71;
+        }
+        .query-warning {
+            background-color: #fef5d4;
+            border: 1px solid #f39c12;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 主标题 -->
+        <h1 class="main-title">压降试井</h1>
+        
+        <!-- 1. 参数输入区 -->
+        <div class="section">
+            <h2>1. 基础参数输入</h2>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="Q">产量 Q (m³/d)</label>
+                    <input type="number" id="Q" step="0.1" required="" value="238.5">
+                </div>
+                <div class="param-item">
+                    <label for="h">油层厚度 h (m)</label>
+                    <input type="number" id="h" step="0.1" required="" value="6.1">
+                </div>
+                <div class="param-item">
+                    <label for="rw">井半径 rw (cm)</label>
+                    <input type="number" id="rw" step="0.1" required="" value="10">
+                </div>
+                <div class="param-item">
+                    <label for="phi">孔隙度 φ (小数)</label>
+                    <input type="number" id="phi" step="0.01" min="0" max="1" required="" value="0.18">
+                </div>
+                <div class="param-item">
+                    <label for="Ct">总压缩系数 Ct (MPa⁻¹)</label>
+                    <input type="number" id="Ct" step="1e-6" required="" value="2.13e-3">
+                </div>
+                <div class="param-item">
+                    <label for="mu">黏度 μ (mPa·s)</label>
+                    <input type="number" id="mu" step="0.01" required="" value="1.00">
+                </div>
+                <div class="param-item">
+                    <label for="B">体积系数 B (无因次)</label>
+                    <input type="number" id="B" step="0.01" required="" value="1.20">
+                </div>
+                <div class="param-item">
+                    <label for="pi">原始地层压力 pi (MPa)</label>
+                    <input type="number" id="pi" step="0.01" required="" value="24.61">
+                </div>
+            </div>
+
+            <h2>2. 实测数据录入（t-h, pwf-MPa）</h2>
+            <button class="btn" id="addRow">添加数据行</button>
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>时间 t (h)</th>
+                        <th>井底压力 pwf (MPa)</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 实测数据 -->
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="1"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.51"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="2"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.38"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="3"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.30"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="4"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.24"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="5"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.17"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="7.5"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="20.02"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="10"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="19.90"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="15"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="19.64"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="20"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="19.42"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="30"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="19"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="40"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="18.63"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="50"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="18.26"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="60"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="17.89"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="70"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="17.54"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="80"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="17.18"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="90"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="16.82"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" class="t-input" step="0.1" value="100"></td>
+                        <td><input type="number" class="pwf-input" step="0.01" value="16.46"></td>
+                        <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>3. 阶段时间设置</h2>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="elasticEndTime">弹性第一阶段结束时间 (h)</label>
+                    <input type="number" id="elasticEndTime" step="0.1" required="" value="4">
+                </div>
+                <div class="param-item">
+                    <label for="pseudoStartTime">拟稳态阶段开始时间 (h)</label>
+                    <input type="number" id="pseudoStartTime" step="0.1" required="" value="50">
+                </div>
+            </div>
+
+            <!-- 新增：压力查询区域 -->
+            <div class="query-section">
+                <h3>4. 压力查询</h3>
+                <div class="param-group" style="grid-template-columns: 300px auto;">
+                    <div class="param-item">
+                        <label for="queryTime">查询时间 t (h)</label>
+                        <input type="number" id="queryTime" step="0.1" required="" placeholder="请输入查询时间">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button class="btn" id="queryPressure">查询压力</button>
+                    </div>
+                </div>
+                <div id="queryResult" class="query-result">
+                    <div id="queryResultContent"></div>
+                </div>
+            </div>
+
+            <button class="btn" id="calculate">计算</button>
+        </div>
+
+        <!-- 2. 图表展示区 -->
+        <div class="section">
+            <h2>半对数曲线图（lg t - pwf）</h2>
+            <div class="chart-container">
+                <canvas id="semiLogChart"></canvas>
+            </div>
+
+            <h2>正常坐标曲线图（t - pwf）</h2>
+            <div class="chart-container">
+                <canvas id="normalChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. 结果显示区 -->
+        <div class="section">
+            <h2>计算结果</h2>
+            <div id="resultArea" class="result-card" style="display: none;">
+                <div class="result-item">
+                    <strong>有效渗透率 K：</strong> <span id="K-result"></span> × 10⁻³ μm²
+                </div>
+                <div class="result-item">
+                    <strong>表皮系数 S：</strong> <span id="S-result"></span>（无因次）
+                </div>
+                <div class="result-item">
+                    <strong>油藏面积 A：</strong> <span id="A-result"></span> m²
+                </div>
+                <div class="result-item">
+                    <strong>弹性阶段拟合函数（半对数）：</strong> <span id="elasticEquation"></span>
+                </div>
+                <div class="result-item">
+                    <strong>拟稳态阶段拟合函数（正常坐标）：</strong> <span id="pseudoEquation"></span>
+                </div>
+            </div>
+            <div id="errorArea" class="error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量存储拟合结果（供计算使用）
+        let elasticFitResult = null; // 弹性阶段拟合：{slope: m, intercept: p1h, equation}
+        let pseudoFitResult = null;  // 拟稳态阶段拟合：{slope: b, intercept: p0, equation}
+
+        // 1. 动态添加数据行
+        document.getElementById('addRow').addEventListener('click', function() {
+            const tableBody = document.getElementById('dataTable').querySelector('tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="number" class="t-input" step="0.1" required></td>
+                <td><input type="number" class="pwf-input" step="0.01" required></td>
+                <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
+            `;
+            tableBody.appendChild(newRow);
+        });
+
+        // 2. 删除数据行
+        function deleteRow(btn) {
+            const row = btn.closest('tr');
+            const tableBody = row.closest('tbody');
+            if (tableBody.children.length > 1) { // 至少保留1行数据
+                tableBody.removeChild(row);
+            } else {
+                alert('至少保留1组实测数据');
+            }
+        }
+
+        // 3. 线性回归计算函数（输入x、y数组，返回斜率、截距、拟合方程）
+        function linearRegression(x, y) {
+            const n = x.length;
+            if (n < 2) throw new Error('至少需要2个数据点进行线性回归');
+
+            // 计算求和项
+            const sumX = x.reduce((acc, val) => acc + val, 0);
+            const sumY = y.reduce((acc, val) => acc + val, 0);
+            const sumXY = x.reduce((acc, val, i) => acc + val * y[i], 0);
+            const sumX2 = x.reduce((acc, val) => acc + val * val, 0);
+
+            // 计算斜率和截距
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            // 生成拟合方程字符串
+            const equation = `pwf = ${slope.toFixed(4)} × ${x[0] instanceof Number ? 't' : 'lg t'} + ${intercept.toFixed(4)}`;
+            return { slope, intercept, equation };
+        }
+
+        // 4. 获取并验证输入数据
+        function getValidatedData() {
+            // 4.1 基础参数
+            const params = {
+                Q: parseFloat(document.getElementById('Q').value),
+                h: parseFloat(document.getElementById('h').value),
+                rw: parseFloat(document.getElementById('rw').value),
+                phi: parseFloat(document.getElementById('phi').value),
+                Ct: parseFloat(document.getElementById('Ct').value),
+                mu: parseFloat(document.getElementById('mu').value),
+                B: parseFloat(document.getElementById('B').value),
+                pi: parseFloat(document.getElementById('pi').value),
+                elasticEndTime: parseFloat(document.getElementById('elasticEndTime').value),
+                pseudoStartTime: parseFloat(document.getElementById('pseudoStartTime').value)
+            };
+
+            // 验证基础参数有效性
+            for (const [key, val] of Object.entries(params)) {
+                if (isNaN(val) || val <= 0) {
+                    throw new Error(`参数 ${key} 输入无效（需为正数）`);
+                }
+            }
+            if (params.elasticEndTime >= params.pseudoStartTime) {
+                throw new Error('弹性阶段结束时间需小于拟稳态阶段开始时间');
+            }
+
+            // 4.2 实测数据（t, pwf）
+            const tInputs = document.querySelectorAll('.t-input');
+            const pwfInputs = document.querySelectorAll('.pwf-input');
+            const measuredData = [];
+
+            for (let i = 0; i < tInputs.length; i++) {
+                const t = parseFloat(tInputs[i].value);
+                const pwf = parseFloat(pwfInputs[i].value);
+                if (isNaN(t) || t <= 0 || isNaN(pwf) || pwf <= 0) {
+                    throw new Error(`第 ${i+1} 行实测数据输入无效（需为正数）`);
+                }
+                measuredData.push({ t, pwf });
+            }
+
+            // 按时间排序（确保图表显示顺序正确）
+            measuredData.sort((a, b) => a.t - b.t);
+            return { params, measuredData };
+        }
+
+        // 5. 生成图表
+        function generateCharts() {
+            try {
+                const { params, measuredData } = getValidatedData();
+                const { elasticEndTime, pseudoStartTime } = params;
+
+                // 5.1 数据拆分
+                // 弹性阶段数据（t ≤ 弹性结束时间）
+                const elasticData = measuredData.filter(d => d.t <= elasticEndTime);
+                // 拟稳态阶段数据（t ≥ 拟稳态开始时间）
+                const pseudoData = measuredData.filter(d => d.t >= pseudoStartTime);
+
+                if (elasticData.length < 2) throw new Error('弹性阶段数据不足2个，无法拟合');
+                if (pseudoData.length < 2) throw new Error('拟稳态阶段数据不足2个，无法拟合');
+
+                // 5.2 半对数图（x: lg t，y: pwf）
+                const semiLogCtx = document.getElementById('semiLogChart').getContext('2d');
+                // 计算lg t（注意t>0）
+                const elasticLgT = elasticData.map(d => Math.log10(d.t));
+                const elasticPwf = elasticData.map(d => d.pwf);
+                // 弹性阶段线性回归
+                elasticFitResult = linearRegression(elasticLgT, elasticPwf);
+
+                // 绘制半对数图拟合线（覆盖数据范围）
+                const minLgT = Math.log10(elasticData[0].t);
+                const maxLgT = Math.log10(elasticData[elasticData.length - 1].t);
+                const fitLineLgT = [minLgT, maxLgT];
+                const fitLinePwf = fitLineLgT.map(x => elasticFitResult.slope * x + elasticFitResult.intercept);
+
+                // 销毁已有图表（避免重复绘制）
+                if (window.semiLogChartInstance) window.semiLogChartInstance.destroy();
+                window.semiLogChartInstance = new Chart(semiLogCtx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [
+                            // 原始数据点
+                            {
+                                label: '实测数据',
+                                data: measuredData.map(d => ({ x: Math.log10(d.t), y: d.pwf })),
+                                backgroundColor: '#3498db',
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            },
+                            // 弹性阶段拟合线
+                            {
+                                label: '弹性阶段拟合线',
+                                data: fitLineLgT.map((x, i) => ({ x, y: fitLinePwf[i] })),
+                                type: 'line',
+                                borderColor: '#e74c3c',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0
+                            },
+                            // 弹性阶段数据点（高亮）
+                            {
+                                label: '弹性阶段数据',
+                                data: elasticData.map(d => ({ x: Math.log10(d.t), y: d.pwf })),
+                                backgroundColor: '#e74c3c',
+                                pointRadius: 6,
+                                pointHoverRadius: 8
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'lg t (h)', font: { size: 14 } },
+                                type: 'linear', // 半对数图x轴为lg t的线性刻度
+                                min: Math.log10(Math.min(...measuredData.map(d => d.t)) * 0.8),
+                                max: Math.log10(Math.max(...measuredData.map(d => d.t)) * 1.2)
+                            },
+                            y: {
+                                title: { display: true, text: '井底压力 pwf (MPa)', font: { size: 14 } },
+                                min: Math.min(...measuredData.map(d => d.pwf)) - 0.5,
+                                max: Math.max(...measuredData.map(d => d.pwf)) + 0.5
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: {
+                                display: true,
+                                text: `半对数曲线（弹性阶段拟合：${elasticFitResult.equation}）`,
+                                font: { size: 16 }
+                            }
+                        }
+                    }
+                });
+
+                // 5.3 正常坐标图（x: t，y: pwf）
+                const normalCtx = document.getElementById('normalChart').getContext('2d');
+                // 拟稳态阶段数据
+                const pseudoT = pseudoData.map(d => d.t);
+                const pseudoPwf = pseudoData.map(d => d.pwf);
+                // 拟稳态阶段线性回归
+                pseudoFitResult = linearRegression(pseudoT, pseudoPwf);
+
+                // 绘制拟稳态拟合线（覆盖数据范围）
+                const minT = pseudoData[0].t;
+                const maxT = pseudoData[pseudoData.length - 1].t;
+                const fitLineT = [minT, maxT];
+                const fitLinePwf2 = fitLineT.map(x => pseudoFitResult.slope * x + pseudoFitResult.intercept);
+
+                // 销毁已有图表
+                if (window.normalChartInstance) window.normalChartInstance.destroy();
+                window.normalChartInstance = new Chart(normalCtx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [
+                            // 原始数据点
+                            {
+                                label: '实测数据',
+                                data: measuredData.map(d => ({ x: d.t, y: d.pwf })),
+                                backgroundColor: '#3498db',
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            },
+                            // 拟稳态阶段拟合线
+                            {
+                                label: '拟稳态阶段拟合线',
+                                data: fitLineT.map((x, i) => ({ x, y: fitLinePwf2[i] })),
+                                type: 'line',
+                                borderColor: '#2ecc71',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0
+                            },
+                            // 拟稳态阶段数据点（高亮）
+                            {
+                                label: '拟稳态阶段数据',
+                                data: pseudoData.map(d => ({ x: d.t, y: d.pwf })),
+                                backgroundColor: '#2ecc71',
+                                pointRadius: 6,
+                                pointHoverRadius: 8
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                title: { display: true, text: '时间 t (h)', font: { size: 14 } },
+                                type: 'linear',
+                                min: Math.min(...measuredData.map(d => d.t)) * 0.8,
+                                max: Math.max(...measuredData.map(d => d.t)) * 1.2
+                            },
+                            y: {
+                                title: { display: true, text: '井底压力 pwf (MPa)', font: { size: 14 } },
+                                min: Math.min(...measuredData.map(d => d.pwf)) - 0.5,
+                                max: Math.max(...measuredData.map(d => d.pwf)) + 0.5
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: {
+                                display: true,
+                                text: `正常坐标曲线（拟稳态阶段拟合：${pseudoFitResult.equation}）`,
+                                font: { size: 16 }
+                            }
+                        }
+                    }
+                });
+
+                // 显示成功信息
+                document.getElementById('errorArea').style.display = 'none';
+                return true;
+            } catch (err) {
+                // 显示错误信息
+                document.getElementById('errorArea').textContent = `错误：${err.message}`;
+                document.getElementById('errorArea').style.display = 'block';
+                return false;
+            }
+        }
+
+        // 6. 计算核心参数（渗透率K、表皮系数S、油藏面积A）
+        function calculateResults() {
+            try {
+                if (!elasticFitResult || !pseudoFitResult) {
+                    throw new Error('图表生成失败，无法计算结果');
+                }
+
+                const { params } = getValidatedData();
+                const { Q, h, rw, phi, Ct, mu, B, pi } = params;
+                const { slope: m, intercept: p1h } = elasticFitResult; // 弹性阶段斜率m（负）
+                const { slope: b } = pseudoFitResult; // 拟稳态阶段斜率b（负）
+
+                // 6.1 计算有效渗透率K（公式4-54）
+                // K = 2.1208 * Q * B * mu / (|m| * h)
+                const absM = Math.abs(m);
+                const K = (2.1208 * Q * B * mu) / (absM * h);
+
+                // 6.2 计算表皮系数S（公式4-55）
+                // S = 1.1512 * [(pi - p1h)/|m| - lg(K/(phi*mu*Ct*rw²)) - 1.9077]
+                const term1 = (pi - p1h) / absM;
+                const denominator = phi * mu * Ct * (rw ** 2); // rw单位：cm，平方后为cm²
+                const logTerm = Math.log10(K / denominator);
+                const S = 1.1512 * (term1 - logTerm - 1.9077);
+
+                // 6.3 计算油藏面积A（公式4-57）
+                // A = 0.04167 * Q * B / (phi * h * Ct * |b| * mu)
+                const absB = Math.abs(b);
+                const A = (0.04167 * Q * B) / (phi * h * Ct * absB * mu);
+
+                // 6.4 显示结果
+                document.getElementById('K-result').textContent = K.toFixed(1);
+                document.getElementById('S-result').textContent = S.toFixed(2);
+                document.getElementById('A-result').textContent = Math.round(A).toLocaleString();
+                document.getElementById('elasticEquation').textContent = elasticFitResult.equation;
+                document.getElementById('pseudoEquation').textContent = pseudoFitResult.equation;
+
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('errorArea').style.display = 'none';
+            } catch (err) {
+                document.getElementById('errorArea').textContent = `计算错误：${err.message}`;
+                document.getElementById('errorArea').style.display = 'block';
+                document.getElementById('resultArea').style.display = 'none';
+            }
+        }
+
+        // 7. 新增：查询任意时间点的压力
+        function queryPressureAtTime() {
+            try {
+                // 验证是否已完成计算
+                if (!elasticFitResult || !pseudoFitResult) {
+                    throw new Error('请先点击"计算"按钮完成分析');
+                }
+
+                // 获取查询时间
+                const queryTime = parseFloat(document.getElementById('queryTime').value);
+                if (isNaN(queryTime) || queryTime <= 0) {
+                    throw new Error('请输入有效的查询时间（正数）');
+                }
+
+                // 获取阶段时间参数
+                const { params } = getValidatedData();
+                const { elasticEndTime, pseudoStartTime } = params;
+
+                let pressure, stage, equation;
+
+                // 根据不同阶段计算压力
+                if (queryTime <= elasticEndTime) {
+                    // 弹性阶段：使用半对数拟合曲线
+                    const lgT = Math.log10(queryTime);
+                    pressure = elasticFitResult.slope * lgT + elasticFitResult.intercept;
+                    stage = "弹性阶段";
+                    equation = elasticFitResult.equation;
+                } else if (queryTime >= pseudoStartTime) {
+                    // 拟稳态阶段：使用正常坐标拟合曲线
+                    pressure = pseudoFitResult.slope * queryTime + pseudoFitResult.intercept;
+                    stage = "拟稳态阶段";
+                    equation = pseudoFitResult.equation;
+                } else {
+                    // 过渡阶段：提示用户并使用最近的拟合曲线
+                    pressure = pseudoFitResult.slope * queryTime + pseudoFitResult.intercept;
+                    stage = "过渡阶段（介于弹性阶段和拟稳态阶段之间）";
+                    equation = "拟稳态阶段拟合方程（仅供参考）：" + pseudoFitResult.equation;
+                }
+
+                // 显示查询结果
+                const resultElement = document.getElementById('queryResult');
+                const contentElement = document.getElementById('queryResultContent');
+                
+                contentElement.innerHTML = `
+                    <p><strong>查询时间：</strong>${queryTime} h</p>
+                    <p><strong>所属阶段：</strong>${stage}</p>
+                    <p><strong>计算压力：</strong>${pressure.toFixed(4)} MPa</p>
+                    <p><strong>使用公式：</strong>${equation}</p>
+                `;
+                
+                // 根据阶段设置不同样式
+                if (queryTime > elasticEndTime && queryTime < pseudoStartTime) {
+                    resultElement.className = "query-result query-warning";
+                } else {
+                    resultElement.className = "query-result query-success";
+                }
+                
+                resultElement.style.display = "block";
+                document.getElementById('errorArea').style.display = 'none';
+
+            } catch (err) {
+                // 显示错误信息
+                const resultElement = document.getElementById('queryResult');
+                resultElement.style.display = "block";
+                resultElement.className = "query-result query-warning";
+                document.getElementById('queryResultContent').textContent = `查询错误：${err.message}`;
+            }
+        }
+
+        // 8. 事件监听
+        document.getElementById('calculate').addEventListener('click', function() {
+            // 先尝试生成图表，如果成功再计算结果
+            const chartsGenerated = generateCharts();
+            if (chartsGenerated) {
+                calculateResults();
+            }
+        });
+
+        // 新增：查询按钮点击事件
+        document.getElementById('queryPressure').addEventListener('click', queryPressureAtTime);
+
+        // 支持回车键查询
+        document.getElementById('queryTime').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                queryPressureAtTime();
+            }
+        });
+    </script>
+
+
+</body></html>
