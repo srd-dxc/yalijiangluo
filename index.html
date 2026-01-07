@@ -153,6 +153,18 @@
             background-color: #fef5d4;
             border: 1px solid #f39c12;
         }
+        .calculation-detail {
+            background: #f8f9fa;
+            border-left: 3px solid #3498db;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .calculation-step {
+            margin: 5px 0;
+            color: #555;
+        }
 
         /* 响应式调整 */
         @media (min-width: 768px) {
@@ -399,9 +411,18 @@
                 <div class="result-item">
                     <strong>表皮系数 S：</strong> <span id="S-result"></span>（无因次）
                 </div>
+                
+                <!-- 油藏面积计算详情 -->
                 <div class="result-item">
                     <strong>油藏面积 A：</strong> <span id="A-result"></span> m²
                 </div>
+                <div class="calculation-detail" id="A-calculation-detail">
+                    <div class="calculation-step">计算公式：A = 0.04167 × Q × B / (φ × h × Ct × |b|)</div>
+                    <div class="calculation-step">分子 = 0.04167 × <span id="A-Q"></span> × <span id="A-B"></span> = <span id="A-numerator"></span></div>
+                    <div class="calculation-step">分母 = <span id="A-phi"></span> × <span id="A-h"></span> × <span id="A-Ct"></span> × <span id="A-absB"></span> = <span id="A-denominator"></span></div>
+                    <div class="calculation-step">A = <span id="A-numerator-final"></span> / <span id="A-denominator-final"></span> = <span id="A-value"></span> m²</div>
+                </div>
+                
                 <div class="result-item">
                     <strong>弹性阶段拟合函数（半对数）：</strong> <span id="elasticEquation"></span>
                 </div>
@@ -745,9 +766,11 @@
                 const S = 1.1512 * (term1 - logTerm - 1.9077);
 
                 // 6.3 计算油藏面积A（公式4-57）
-                // A = 0.04167 * Q * B / (phi * h * Ct * |b| * mu)
+                // A = 0.04167 * Q * B / (phi * h * Ct * |b|)
                 const absB = Math.abs(b);
-                const A = (0.04167 * Q * B) / (phi * h * Ct * absB * mu);
+                const numerator = 0.04167 * Q * B;
+                const areaDenominator = phi * h * Ct * absB;
+                const A = numerator / areaDenominator;
 
                 // 6.4 显示结果
                 document.getElementById('K-result').textContent = K.toFixed(1);
@@ -755,6 +778,22 @@
                 document.getElementById('A-result').textContent = Math.round(A).toLocaleString();
                 document.getElementById('elasticEquation').textContent = elasticFitResult.equation;
                 document.getElementById('pseudoEquation').textContent = pseudoFitResult.equation;
+
+                // 显示油藏面积计算详情
+                document.getElementById('A-Q').textContent = Q;
+                document.getElementById('A-B').textContent = B;
+                document.getElementById('A-phi').textContent = phi;
+                document.getElementById('A-h').textContent = h;
+                document.getElementById('A-Ct').textContent = Ct;
+                document.getElementById('A-absB').textContent = absB.toFixed(4);
+                document.getElementById('A-numerator').textContent = numerator.toFixed(4);
+                document.getElementById('A-denominator').textContent = areaDenominator.toFixed(6);
+                document.getElementById('A-numerator-final').textContent = numerator.toFixed(4);
+                document.getElementById('A-denominator-final').textContent = areaDenominator.toFixed(6);
+                document.getElementById('A-value').textContent = A.toFixed(2);
+
+                // 显示计算详情区域
+                document.getElementById('A-calculation-detail').style.display = 'block';
 
                 document.getElementById('resultArea').style.display = 'block';
                 document.getElementById('errorArea').style.display = 'none';
