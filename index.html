@@ -1,4 +1,5 @@
-<html lang="zh-CN"><head>
+<html lang="zh-CN">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>压降试井数据分析工具</title>
@@ -209,35 +210,35 @@
             <div class="param-group">
                 <div class="param-item">
                     <label for="Q">产量 Q (m³/d)</label>
-                    <input type="number" id="Q" step="0.1" required="" value="238.5">
+                    <input type="number" id="Q" step="0.1" required value="238.5">
                 </div>
                 <div class="param-item">
                     <label for="h">油层厚度 h (m)</label>
-                    <input type="number" id="h" step="0.1" required="" value="6.1">
+                    <input type="number" id="h" step="0.1" required value="6.1">
                 </div>
                 <div class="param-item">
                     <label for="rw">井半径 rw (cm)</label>
-                    <input type="number" id="rw" step="0.1" required="" value="10">
+                    <input type="number" id="rw" step="0.1" required value="10">
                 </div>
                 <div class="param-item">
                     <label for="phi">孔隙度 φ (小数)</label>
-                    <input type="number" id="phi" step="0.01" min="0" max="1" required="" value="0.18">
+                    <input type="number" id="phi" step="0.01" min="0" max="1" required value="0.18">
                 </div>
                 <div class="param-item">
                     <label for="Ct">总压缩系数 Ct (MPa⁻¹)</label>
-                    <input type="number" id="Ct" step="1e-6" required="" value="2.13e-3">
+                    <input type="number" id="Ct" step="1e-6" required value="2.13e-3">
                 </div>
                 <div class="param-item">
                     <label for="mu">黏度 μ (mPa·s)</label>
-                    <input type="number" id="mu" step="0.01" required="" value="1.00">
+                    <input type="number" id="mu" step="0.01" required value="1.00">
                 </div>
                 <div class="param-item">
                     <label for="B">体积系数 B (无因次)</label>
-                    <input type="number" id="B" step="0.01" required="" value="1.20">
+                    <input type="number" id="B" step="0.01" required value="1.20">
                 </div>
                 <div class="param-item">
                     <label for="pi">原始地层压力 pi (MPa)</label>
-                    <input type="number" id="pi" step="0.01" required="" value="24.61">
+                    <input type="number" id="pi" step="0.01" required value="24.61">
                 </div>
             </div>
 
@@ -264,7 +265,6 @@
                             <td><input type="number" class="pwf-input" step="0.01" value="20.38"></td>
                             <td><button class="btn btn-delete" onclick="deleteRow(this)">删除</button></td>
                         </tr>
-                        <!-- 其他数据行保持不变 -->
                         <tr>
                             <td><input type="number" class="t-input" step="0.1" value="3"></td>
                             <td><input type="number" class="pwf-input" step="0.01" value="20.30"></td>
@@ -348,11 +348,11 @@
             <div class="param-group">
                 <div class="param-item">
                     <label for="elasticEndTime">弹性第一阶段结束时间 (h)</label>
-                    <input type="number" id="elasticEndTime" step="0.1" required="" value="4">
+                    <input type="number" id="elasticEndTime" step="0.1" required value="4">
                 </div>
                 <div class="param-item">
                     <label for="pseudoStartTime">拟稳态阶段开始时间 (h)</label>
-                    <input type="number" id="pseudoStartTime" step="0.1" required="" value="50">
+                    <input type="number" id="pseudoStartTime" step="0.1" required value="50">
                 </div>
             </div>
 
@@ -362,7 +362,7 @@
                 <div class="param-group" style="grid-template-columns: 1fr auto;">
                     <div class="param-item">
                         <label for="queryTime">查询时间 t (h)</label>
-                        <input type="number" id="queryTime" step="0.1" required="" placeholder="请输入查询时间">
+                        <input type="number" id="queryTime" step="0.1" required placeholder="请输入查询时间">
                     </div>
                     <div style="display: flex; align-items: flex-end;">
                         <button class="btn" id="queryPressure">查询压力</button>
@@ -442,7 +442,7 @@
         }
 
         // 3. 线性回归计算函数（输入x、y数组，返回斜率、截距、拟合方程）
-        function linearRegression(x, y) {
+        function linearRegression(x, y, xName = 't') {
             const n = x.length;
             if (n < 2) throw new Error('至少需要2个数据点进行线性回归');
 
@@ -457,7 +457,7 @@
             const intercept = (sumY - slope * sumX) / n;
 
             // 生成拟合方程字符串
-            const equation = `pwf = ${slope.toFixed(4)} × ${x[0] instanceof Number ? 't' : 'lg t'} + ${intercept.toFixed(4)}`;
+            const equation = `pwf = ${slope.toFixed(4)} × ${xName} + ${intercept.toFixed(4)}`;
             return { slope, intercept, equation };
         }
 
@@ -526,8 +526,8 @@
                 // 计算lg t（注意t>0）
                 const elasticLgT = elasticData.map(d => Math.log10(d.t));
                 const elasticPwf = elasticData.map(d => d.pwf);
-                // 弹性阶段线性回归
-                elasticFitResult = linearRegression(elasticLgT, elasticPwf);
+                // 弹性阶段线性回归（使用'lg t'作为x轴变量名）
+                elasticFitResult = linearRegression(elasticLgT, elasticPwf, 'lg t');
 
                 // 绘制半对数图拟合线（覆盖数据范围）
                 const minLgT = Math.log10(elasticData[0].t);
@@ -620,8 +620,8 @@
                 // 拟稳态阶段数据
                 const pseudoT = pseudoData.map(d => d.t);
                 const pseudoPwf = pseudoData.map(d => d.pwf);
-                // 拟稳态阶段线性回归
-                pseudoFitResult = linearRegression(pseudoT, pseudoPwf);
+                // 拟稳态阶段线性回归（使用't'作为x轴变量名）
+                pseudoFitResult = linearRegression(pseudoT, pseudoPwf, 't');
 
                 // 绘制拟稳态拟合线（覆盖数据范围）
                 const minT = pseudoData[0].t;
@@ -853,6 +853,5 @@
             }
         });
     </script>
-
-
-</body></html>
+</body>
+</html>
