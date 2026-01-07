@@ -769,7 +769,7 @@
                 // A = 0.04167 * Q * B / (phi * h * Ct * |b|)
                 const absB = Math.abs(b);
                 const numerator = 0.04167 * Q * B;
-                const areaDenominator = phi * h * Ct * absB;
+                const areaDenominator = phi * h * Ct * absB.toFixed(4);
                 const A = numerator / areaDenominator;
 
                 // 6.4 显示结果
@@ -779,7 +779,7 @@
                 document.getElementById('elasticEquation').textContent = elasticFitResult.equation;
                 document.getElementById('pseudoEquation').textContent = pseudoFitResult.equation;
 
-                // 显示油藏面积计算详情
+                // 显示油藏面积计算详情（分母保留12位小数）
                 document.getElementById('A-Q').textContent = Q;
                 document.getElementById('A-B').textContent = B;
                 document.getElementById('A-phi').textContent = phi;
@@ -787,9 +787,9 @@
                 document.getElementById('A-Ct').textContent = Ct;
                 document.getElementById('A-absB').textContent = absB.toFixed(4);
                 document.getElementById('A-numerator').textContent = numerator.toFixed(4);
-                document.getElementById('A-denominator').textContent = areaDenominator.toFixed(6);
+                document.getElementById('A-denominator').textContent = areaDenominator.toFixed(12);
                 document.getElementById('A-numerator-final').textContent = numerator.toFixed(4);
-                document.getElementById('A-denominator-final').textContent = areaDenominator.toFixed(6);
+                document.getElementById('A-denominator-final').textContent = areaDenominator.toFixed(12);
                 document.getElementById('A-value').textContent = A.toFixed(2);
 
                 // 显示计算详情区域
